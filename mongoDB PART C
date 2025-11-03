@@ -1,0 +1,70 @@
+// catalog.js
+const mongoose = require('mongoose');
+
+async function main() {
+  await mongoose.connect('mongodb://localhost:27017/ecommerce_catalog', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+  });
+  console.log('Connected to MongoDB');
+
+  const variantSchema = new mongoose.Schema({
+    color: { type: String, required: true, trim: true },
+    size: { type: String, required: true, trim: true },
+    stock: { type: Number, required: true, min: 0 }
+  });
+
+  const productSchema = new mongoose.Schema({
+    name: { type: String, required: true, trim: true },
+    price: { type: Number, required: true, min: 0 },
+    category: { type: String, required: true, trim: true },
+    variants: [ variantSchema ]
+  }, {
+    timestamps: true
+  });
+
+  const Product = mongoose.model('Product', productSchema);
+
+  // Insert sample products
+  await Product.create([
+    {
+      name: "Men's T-Shirt",
+      price: 299,
+      category: "Clothing",
+      variants: [
+        { color: "Red", size: "M", stock: 10 },
+        { color: "Blue", size: "L", stock: 5 }
+      ]
+    },
+    {
+      name: "Wireless Earbuds",
+      price: 1999,
+      category: "Electronics",
+      variants: [
+        { color: "Black", size: "Standard", stock: 15 },
+        { color: "White", size: "Standard", stock: 8 }
+      ]
+    }
+  ]);
+  console.log('Sample products inserted');
+
+  // Query: retrieve all products
+  const all = await Product.find();
+  console.log("All products:", all);
+
+  // Query: filter by category “Clothing”
+  const clothing = await Product.find({ category: "Clothing" });
+  console.log("Clothing category products:", clothing);
+
+  // Query: project specific variant details (only for one product)
+  const proj = await Product.findOne({ name: "Men's T-Shirt" }, { name: 1, variants: { $elemMatch: { color: "Blue" } } });
+  console.log("Projected variant (Blue):", proj);
+
+  await mongoose.disconnect();
+  console.log('Disconnected from MongoDB');
+}
+
+main().catch(err => {
+  console.error(err);
+  mongoose.disconnect();
+});
